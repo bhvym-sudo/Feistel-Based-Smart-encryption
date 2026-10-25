@@ -100,6 +100,24 @@ def test_validation_rejects_bad_round_count():
     assert response.status_code == 422
 
 
+def test_analysis_api_compares_all_round_counts():
+    response = request("POST", "/api/analysis/run", json={
+        "key": 0xBEEF,
+        "samples": 16,
+        "iterations": 1000,
+        "voltage": 3.3,
+        "active_current_ma": 8,
+    })
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["rounds"] for item in body["configurations"]] == [4, 6, 8]
+    for item in body["configurations"]:
+        assert len(item["avalanche"]["heatmap"]) == 8
+        assert item["timing"]["minimum_us"] <= item["timing"]["maximum_us"]
+        assert item["timing"]["standard_deviation_us"] >= 0
+        assert item["energy_estimate"]["estimated_power_mw"] == 26.4
+
+
 def test_excel_export_downloads_valid_workbook():
     response = request("GET", "/api/automation/export.xlsx")
     assert response.status_code == 200

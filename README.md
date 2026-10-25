@@ -15,7 +15,9 @@ data.
 - Round-by-round key, S-box, permutation, and state trace
 - Packet framing with IV, sequence number, and separate HMAC integrity tag
 - Plaintext avalanche and key-sensitivity experiments
-- Host execution-time benchmark and clearly labelled energy estimate
+- Analysis tab with 4/6/8-round comparison, diffusion heatmaps and charts
+- Batched execution-time benchmark with range, deviation and throughput
+- Clearly labelled software power and energy estimate
 - Responsive frontend and interactive FastAPI documentation
 
 ## Run locally
@@ -76,11 +78,11 @@ S-box, bit permutation, key schedule, and round behavior are isolated in
 `app/core/cipher.py`. Keep the `encrypt`, `decrypt`, and trace return formats
 stable so the API and visualizer continue working.
 
-### Add a hardware benchmark
+### Analysis model
 
-Keep Python timing separate from MCU results. Add imported Arduino/Wokwi results
-as a new service or endpoint and identify voltage, current, clock rate, compiler,
-and number of samples in every exported result.
+The Analysis tab compares 4, 6 and 8 rounds using the same samples and benchmark
+settings. Power and energy values are software-based estimates calculated from
+the displayed voltage, current and measured Python execution time.
 
 ## API summary
 

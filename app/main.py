@@ -169,7 +169,7 @@ async def run_analysis(payload: AnalysisRequest) -> dict[str, object]:
     return {
         "key": payload.key,
         "samples": payload.samples,
-        "note": "Energy values are model-based estimates, not physical MCU measurements.",
+        "note": "Power and energy values are software-based estimates.",
         "configurations": configurations,
     }
 

@@ -12,6 +12,10 @@ def test_analysis_result_shape():
 def test_benchmark_and_energy_are_positive():
     benchmark = benchmark_cipher(0xBEEF, 4, iterations=1000)
     assert benchmark["average_us"] > 0
+    assert benchmark["minimum_us"] <= benchmark["average_us"] <= benchmark["maximum_us"]
+    assert benchmark["standard_deviation_us"] >= 0
+    assert benchmark["batches"] >= 5
     energy = estimate_energy(benchmark["average_us"])
+    assert energy["estimated_power_mw"] == 26.4
     assert energy["estimated_energy_uj"] > 0
 

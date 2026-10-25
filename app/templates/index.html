@@ -15,6 +15,7 @@
         <button class="tab" data-tab="automation">Automation</button>
         <button class="tab" data-tab="graph">Graph</button>
         <button class="tab" data-tab="data">Data</button>
+        <button class="tab" data-tab="analysis">Analysis</button>
       </nav>
       <span class="online"><i></i> Ready</span>
     </header>
@@ -120,6 +121,53 @@
         </div>
         <div id="savedDataRows"><p class="empty">No automation records</p></div>
       </article>
+    </section>
+
+    <section id="analysisView" class="view hidden">
+      <div class="analysis-toolbar">
+        <div><strong>Cryptographic analysis</strong><span id="analysisMeta">4, 6 and 8 rounds</span></div>
+        <button id="runAnalysis">Run analysis</button>
+      </div>
+
+      <div class="energy-model">
+        <div><span>Power model</span><strong>3.3 V × 8 mA = 26.4 mW</strong></div>
+        <div><span>Energy per encryption</span><strong>Power × execution time</strong></div>
+        <small>Software-based estimate</small>
+      </div>
+
+      <section class="analysis-charts">
+        <article class="analysis-card"><h2>Ciphertext diffusion</h2><div id="diffusionChart" class="bar-chart"><p class="empty">Run analysis</p></div></article>
+        <article class="analysis-card"><h2>Execution time</h2><div id="timingChart" class="bar-chart"><p class="empty">Run analysis</p></div></article>
+        <article class="analysis-card"><h2>Estimated energy</h2><div id="energyChart" class="bar-chart"><p class="empty">Run analysis</p></div></article>
+      </section>
+
+      <article class="analysis-table-card">
+        <h2>Round comparison</h2>
+        <div class="analysis-table-head">
+          <span>Rounds</span><span>Diffusion</span><span>Key sensitivity</span><span>Average time</span><span>Timing range</span><span>Deviation</span><span>Throughput</span><span>Energy</span>
+        </div>
+        <div id="analysisRows"><p class="empty">Run analysis to compare configurations</p></div>
+      </article>
+
+      <section class="diffusion-section">
+        <article class="analysis-card heatmap-card">
+          <div class="analysis-card-head">
+            <div><h2>Diffusion heatmap</h2><span>Input bit → ciphertext bit change probability</span></div>
+            <div class="heatmap-switch" aria-label="Heatmap round count">
+              <button class="active" data-heatmap-rounds="4">4</button>
+              <button data-heatmap-rounds="6">6</button>
+              <button data-heatmap-rounds="8">8</button>
+            </div>
+          </div>
+          <div id="heatmapStats" class="heatmap-stats"></div>
+          <div id="diffusionHeatmap" class="heatmap"><p class="empty">Run analysis</p></div>
+          <div class="heatmap-legend"><span>0%</span><i></i><span>100%</span></div>
+        </article>
+        <article class="analysis-card distribution-card">
+          <h2>Changed-bit distribution</h2>
+          <div id="diffusionDistribution" class="distribution"><p class="empty">Run analysis</p></div>
+        </article>
+      </section>
     </section>
   </main>
   <div id="toast" class="toast"></div>

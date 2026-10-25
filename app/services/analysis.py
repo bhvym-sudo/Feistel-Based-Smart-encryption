@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 import random
 import statistics
 import time
@@ -66,27 +65,49 @@ def run_key_sensitivity(key: int, rounds: int, samples: int = 128, seed: int = 1
 def benchmark_cipher(key: int, rounds: int, iterations: int = 20_000) -> dict[str, float | int]:
     iterations = max(1_000, min(iterations, 200_000))
     cipher = FeistelCipher(key, rounds)
-    started = time.perf_counter_ns()
+    batch_count = min(20, max(5, iterations // 1_000))
+    batch_size, remainder = divmod(iterations, batch_count)
+    batch_averages_ns: list[float] = []
     checksum = 0
-    for index in range(iterations):
-        checksum ^= cipher.encrypt(index & 0xFF)
-    elapsed_ns = time.perf_counter_ns() - started
-    average_ns = elapsed_ns / iterations
+
+    # Warm up the interpreter before collecting the timed batches.
+    for plaintext in range(256):
+        checksum ^= cipher.encrypt(plaintext)
+
+    completed = 0
+    total_ns = 0
+    for batch_index in range(batch_count):
+        current_size = batch_size + (1 if batch_index < remainder else 0)
+        started = time.perf_counter_ns()
+        for offset in range(current_size):
+            checksum ^= cipher.encrypt((completed + offset) & 0xFF)
+        elapsed_ns = time.perf_counter_ns() - started
+        total_ns += elapsed_ns
+        completed += current_size
+        batch_averages_ns.append(elapsed_ns / current_size)
+
+    average_ns = total_ns / iterations
+    batch_std_ns = statistics.pstdev(batch_averages_ns)
     return {
         "iterations": iterations,
-        "total_ms": round(elapsed_ns / 1_000_000, 3),
+        "batches": batch_count,
+        "total_ms": round(total_ns / 1_000_000, 3),
         "average_us": round(average_ns / 1_000, 4),
+        "minimum_us": round(min(batch_averages_ns) / 1_000, 4),
+        "maximum_us": round(max(batch_averages_ns) / 1_000, 4),
+        "standard_deviation_us": round(batch_std_ns / 1_000, 4),
         "throughput_blocks_per_second": round(1_000_000_000 / average_ns, 1),
         "checksum": checksum,
     }
 
 
 def estimate_energy(average_us: float, voltage: float = 3.3, active_current_ma: float = 8.0) -> dict[str, float]:
-    # Estimate only: Python execution time is not an MCU hardware measurement.
-    energy_microjoules = voltage * (active_current_ma / 1000) * (average_us / 1_000_000) * 1_000_000
+    estimated_power_mw = voltage * active_current_ma
+    energy_microjoules = estimated_power_mw * average_us / 1_000
     return {
         "voltage_v": voltage,
         "active_current_ma": active_current_ma,
+        "estimated_power_mw": round(estimated_power_mw, 4),
         "estimated_energy_uj": round(energy_microjoules, 6),
     }
 

@@ -8,6 +8,8 @@ let simulationSequence = 1;
 let automationRunning = false;
 let latestAutomationId = null;
 let polling = false;
+let analysisData = null;
+let heatmapRounds = 4;
 
 async function api(path, options = {}) {
   const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
@@ -273,6 +275,96 @@ function exportData() {
   toast("Excel export started");
 }
 
+function renderBarChart(selector, configurations, valueOf, maximum, formatValue) {
+  const values = configurations.map(valueOf);
+  const scale = maximum || Math.max(...values) || 1;
+  $(selector).innerHTML = configurations.map((item, index) => {
+    const width = Math.max(2, Math.min(100, values[index] / scale * 100));
+    return `<div class="bar-row">
+      <strong>${item.rounds} rounds</strong>
+      <div class="bar-track"><i style="width:${width.toFixed(2)}%"></i></div>
+      <span>${formatValue(values[index])}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderHeatmap(rounds) {
+  if (!analysisData) return;
+  heatmapRounds = rounds;
+  $$(".heatmap-switch button").forEach(button => button.classList.toggle("active", Number(button.dataset.heatmapRounds) === rounds));
+  const result = analysisData.configurations.find(item => item.rounds === rounds);
+  const avalanche = result.avalanche;
+  $("#heatmapStats").innerHTML = `
+    <div><span>Average</span><strong>${avalanche.average_changed_bits} bits</strong></div>
+    <div><span>Avalanche</span><strong>${avalanche.average_percent}%</strong></div>
+    <div><span>Deviation</span><strong>${avalanche.standard_deviation} bits</strong></div>
+    <div><span>Observations</span><strong>${avalanche.observations.toLocaleString()}</strong></div>`;
+
+  const cells = ['<span class="axis corner"></span>', ...Array.from({ length: 8 }, (_, index) => `<span class="axis">C${index}</span>`)];
+  avalanche.heatmap.forEach((row, inputBit) => {
+    cells.push(`<span class="axis">I${inputBit}</span>`);
+    row.forEach(value => {
+      const alpha = 0.08 + Number(value) / 100 * 0.78;
+      const color = Number(value) > 62 ? "#06110f" : "#e8eff2";
+      cells.push(`<span class="heat-cell" style="background:rgba(79,215,197,${alpha.toFixed(3)});color:${color}" title="${value}%">${Math.round(value)}</span>`);
+    });
+  });
+  $("#diffusionHeatmap").innerHTML = cells.join("");
+
+  const distribution = Object.entries(avalanche.distribution);
+  const largest = Math.max(...distribution.map(([, count]) => count), 1);
+  $("#diffusionDistribution").innerHTML = distribution.map(([changedBits, count]) => `
+    <div class="distribution-row">
+      <strong>${changedBits} bits</strong>
+      <div><i style="width:${(count / largest * 100).toFixed(2)}%"></i></div>
+      <span>${Number(count).toLocaleString()}</span>
+    </div>`).join("");
+}
+
+function renderAnalysis(response) {
+  analysisData = response;
+  const configurations = response.configurations;
+  const iterations = configurations[0].timing.iterations;
+  $("#analysisMeta").textContent = `Key 0x${Number(response.key).toString(16).padStart(4, "0").toUpperCase()} · ${response.samples} samples · ${iterations.toLocaleString()} timings`;
+
+  renderBarChart("#diffusionChart", configurations, item => Number(item.avalanche.average_percent), 100, value => `${value.toFixed(2)}%`);
+  renderBarChart("#timingChart", configurations, item => Number(item.timing.average_us), null, value => `${value.toFixed(4)} µs`);
+  renderBarChart("#energyChart", configurations, item => Number(item.energy_estimate.estimated_energy_uj), null, value => `${value.toFixed(6)} µJ`);
+
+  $("#analysisRows").innerHTML = configurations.map(item => `
+    <div class="analysis-table-row">
+      <span data-label="Rounds"><strong>${item.rounds}</strong></span>
+      <span data-label="Diffusion">${Number(item.avalanche.average_percent).toFixed(2)}%</span>
+      <span data-label="Key sensitivity">${Number(item.key_sensitivity.average_percent).toFixed(2)}%</span>
+      <span data-label="Average time">${Number(item.timing.average_us).toFixed(4)} µs</span>
+      <span data-label="Timing range">${Number(item.timing.minimum_us).toFixed(4)}–${Number(item.timing.maximum_us).toFixed(4)} µs</span>
+      <span data-label="Deviation">${Number(item.timing.standard_deviation_us).toFixed(4)} µs</span>
+      <span data-label="Throughput">${Math.round(item.timing.throughput_blocks_per_second).toLocaleString()}/s</span>
+      <span data-label="Energy">${Number(item.energy_estimate.estimated_energy_uj).toFixed(6)} µJ</span>
+    </div>`).join("");
+  renderHeatmap(heatmapRounds);
+}
+
+async function runFullAnalysis() {
+  const button = $("#runAnalysis");
+  try {
+    const { key } = getSettings();
+    button.disabled = true;
+    button.textContent = "Analysing…";
+    const response = await api("/api/analysis/run", {
+      method: "POST",
+      body: JSON.stringify({ key, samples: 128, iterations: 20000, voltage: 3.3, active_current_ma: 8 }),
+    });
+    renderAnalysis(response);
+    toast("Analysis complete");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Run analysis";
+  }
+}
+
 async function clearGraph() {
   await api("/api/automation/records", { method: "DELETE" });
   latestAutomationId = null;
@@ -285,7 +377,8 @@ function switchTab(tab) {
   $$(".tab").forEach(button => button.classList.toggle("active", button.dataset.tab === tab));
   $("#graphView").classList.toggle("hidden", tab !== "graph");
   $("#dataView").classList.toggle("hidden", tab !== "data");
-  $("#simulatorView").classList.toggle("hidden", tab === "graph" || tab === "data");
+  $("#analysisView").classList.toggle("hidden", tab !== "analysis");
+  $("#simulatorView").classList.toggle("hidden", tab === "graph" || tab === "data" || tab === "analysis");
   $$(".simulation-only").forEach(element => element.classList.toggle("hidden", tab !== "simulation"));
   $$(".automation-only").forEach(element => element.classList.toggle("hidden", tab !== "automation"));
   if (tab === "simulation") $("#runButton").textContent = "Run simulation";
@@ -295,12 +388,15 @@ function switchTab(tab) {
   }
   if (tab === "graph") syncAutomation(true);
   if (tab === "data") refreshData();
+  if (tab === "analysis" && !analysisData) runFullAnalysis();
 }
 
 $("#runButton").addEventListener("click", () => currentTab === "automation" ? toggleAutomation() : runSimulation());
 $("#clearGraph").addEventListener("click", clearGraph);
 $("#refreshData").addEventListener("click", refreshData);
 $("#exportData").addEventListener("click", exportData);
+$("#runAnalysis").addEventListener("click", runFullAnalysis);
+$$(".heatmap-switch button").forEach(button => button.addEventListener("click", () => renderHeatmap(Number(button.dataset.heatmapRounds))));
 $$(".tab").forEach(button => button.addEventListener("click", () => switchTab(button.dataset.tab)));
 setInterval(() => syncAutomation(), 1000);
 syncAutomation();
