@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Lightweight Feistel-Based Smart Meter Encryption Suite</title>
+  <style>
+    @page { size: A4; margin: 18mm 19mm 17mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #20252b;
+      font-family: "Liberation Sans", Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.38;
+    }
+    h1 {
+      margin: 0 0 5mm;
+      font-size: 24pt;
+      line-height: 1.12;
+      color: #173a57;
+      letter-spacing: -0.3pt;
+    }
+    h2 {
+      margin: 6mm 0 2.2mm;
+      padding-bottom: 1.2mm;
+      border-bottom: 0.6pt solid #aab5be;
+      font-size: 14pt;
+      color: #173a57;
+    }
+    h3 {
+      margin: 4mm 0 1.4mm;
+      font-size: 11.2pt;
+      color: #284f6d;
+    }
+    p { margin: 0 0 2.4mm; }
+    ul, ol { margin: 1.5mm 0 3mm 5.5mm; padding-left: 4mm; }
+    li { margin: 0 0 1.1mm; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2.5mm 0 4mm;
+      font-size: 9.5pt;
+    }
+    th, td {
+      border: 0.6pt solid #aab5be;
+      padding: 2.1mm 2.4mm;
+      vertical-align: top;
+    }
+    th {
+      background: #eaf0f4;
+      color: #173a57;
+      font-weight: bold;
+      text-align: left;
+    }
+    .cover {
+      min-height: 247mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      page-break-after: always;
+    }
+    .label {
+      margin-bottom: 4mm;
+      color: #536777;
+      font-size: 10pt;
+      font-weight: bold;
+      letter-spacing: 1.2pt;
+      text-transform: uppercase;
+    }
+    .subtitle {
+      width: 85%;
+      color: #4f5c66;
+      font-size: 13pt;
+      line-height: 1.45;
+    }
+    .rule {
+      width: 27mm;
+      height: 2.2mm;
+      margin: 0 0 7mm;
+      background: #2e6d92;
+    }
+    .meta {
+      margin-top: 21mm;
+      color: #52616d;
+      font-size: 10pt;
+    }
+    .meta div { margin-top: 2mm; }
+    .flow {
+      margin: 3mm 0 4mm;
+      padding: 3mm 4mm;
+      border-left: 3pt solid #2e6d92;
+      background: #f3f6f8;
+      color: #273d4c;
+      font-weight: bold;
+    }
+    .formula {
+      margin: 2mm 0 3mm;
+      padding: 2.5mm 4mm;
+      background: #f3f6f8;
+      font-family: "Liberation Mono", monospace;
+      font-size: 9.5pt;
+      line-height: 1.5;
+    }
+    .note {
+      margin: 3mm 0;
+      padding: 2.8mm 3.5mm;
+      border: 0.6pt solid #aab5be;
+      background: #fbfcfd;
+    }
+    .small { font-size: 9pt; color: #5b6670; }
+    .page-break { page-break-before: always; }
+    tr { page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="label">Modern Cryptography Mini Project</div>
+    <div class="rule"></div>
+    <h1>Lightweight Feistel-Based<br>Smart Meter Encryption Suite</h1>
+    <p class="subtitle">Project scope, system design, evaluation plan and team responsibilities</p>
+    <div class="meta">
+      <div><strong>Domain:</strong> Symmetric-key cryptography and smart-grid security</div>
+      <div><strong>Implementation:</strong> Python, FastAPI and web-based visualization</div>
+      <div><strong>Team size:</strong> Five members</div>
+    </div>
+  </section>
+
+  <h2>1. Project Overview</h2>
+  <p>
+    The project develops a simulation of a residential smart meter that encrypts electricity-usage
+    readings before sending them to a utility provider. Its core is a custom 8-bit Feistel cipher
+    derived from the structure of DES. The reduced block size makes each operation easy to observe
+    and suitable for studying resource-constrained devices.
+  </p>
+  <p>
+    The cipher is an educational model, not a replacement for AES in a real billing system. The
+    study focuses on the trade-off between computational cost and cryptographic diffusion as the
+    number of rounds changes.
+  </p>
+
+  <h2>2. Objectives</h2>
+  <ul>
+    <li>Implement correct encryption and decryption for 8-bit data blocks.</li>
+    <li>Generate realistic dummy household electricity readings.</li>
+    <li>Visualize every Feistel round through a web interface.</li>
+    <li>Compare 4-, 6- and 8-round configurations.</li>
+    <li>Measure execution time, ciphertext diffusion and estimated energy use.</li>
+    <li>Demonstrate tampering and replay protection in a simulated meter packet.</li>
+  </ul>
+
+  <h2>3. System Flow</h2>
+  <div class="flow">
+    Meter data generation → 8-bit quantization → Feistel encryption → packet transmission →
+    validation → decryption → utility dashboard
+  </div>
+  <p>
+    A reading contains a meter ID, timestamp, sequence number and energy value. The energy value is
+    mapped to an integer from 0 to 255 before encryption. The original and quantized values are both
+    retained so that any loss of precision is visible.
+  </p>
+
+  <h2>4. Cipher Design</h2>
+  <p>
+    An 8-bit plaintext block is divided into two 4-bit halves, <em>L</em> and <em>R</em>. Each round uses
+    a 4-bit subkey derived from a 16-bit master key. The round function applies XOR, substitution and
+    bit permutation.
+  </p>
+  <div class="formula">
+    F(R, Kᵢ) = Permute(SBox(R XOR Kᵢ))<br>
+    L(new) = R<br>
+    R(new) = L XOR F(R, Kᵢ)
+  </div>
+  <p>
+    Decryption applies the round keys in reverse order. The final-swap and output-format convention
+    will be fixed in the algorithm specification and verified using known-answer tests.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Property</th><th>DES</th><th>Project Cipher</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Block size</td><td>64 bits</td><td>8 bits</td></tr>
+      <tr><td>Half size</td><td>32 bits</td><td>4 bits</td></tr>
+      <tr><td>Effective key size</td><td>56 bits</td><td>16-bit baseline</td></tr>
+      <tr><td>Rounds</td><td>16</td><td>4, 6 or 8</td></tr>
+      <tr><td>Purpose</td><td>General-purpose encryption</td><td>Educational lightweight simulation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Dummy Meter Data</h2>
+  <p>
+    The generator will produce a time series with a small base load, morning and evening peaks,
+    occasional appliance spikes and measurement noise. Each generated report will use the following
+    structure:
+  </p>
+  <div class="formula">
+    meter_id | timestamp | sequence_number | usage_kwh | quantized_value
+  </div>
+
+  <div class="page-break"></div>
+  <h2>6. Web Application</h2>
+  <p>
+    FastAPI will provide the backend API and keep the cryptographic logic separate from the user
+    interface. The frontend will use HTML, CSS and JavaScript, with Chart.js or Plotly for graphs.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Module</th><th>Main functions</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Live Meter</td><td>Current reading, time-series graph and simulation controls</td></tr>
+      <tr><td>Cipher Laboratory</td><td>Binary input, round keys, S-box output and round-by-round state</td></tr>
+      <tr><td>Communication</td><td>Packet contents, sequence validation, tampering and replay demo</td></tr>
+      <tr><td>Security Analysis</td><td>Avalanche tests, key sensitivity and diffusion heatmap</td></tr>
+      <tr><td>Performance</td><td>Timing, estimated energy and round-count comparison</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Evaluation</h2>
+  <h3>Execution time</h3>
+  <p>
+    A large batch of blocks will be timed to reduce measurement noise. Mean time per block,
+    variation and throughput will be reported separately for 4, 6 and 8 rounds. Web request latency
+    will not be included in cipher timing.
+  </p>
+
+  <h3>Ciphertext diffusion</h3>
+  <p>
+    One plaintext bit will be changed and both inputs will be encrypted using the same key. The
+    number of changed ciphertext bits gives the avalanche score. Tests will cover every input-bit
+    position across many plaintext and key samples.
+  </p>
+  <div class="formula">
+    Avalanche (%) = changed ciphertext bits / 8 × 100
+  </div>
+
+  <h3>Power consumption</h3>
+  <p>
+    The initial web version will estimate energy from an identified microcontroller's voltage,
+    current and execution time. If hardware is available, the cipher will also be implemented in C
+    and tested using Wokwi or an Arduino with a current sensor.
+  </p>
+  <div class="formula">Energy = Voltage × Current × Execution Time</div>
+
+  <h2>8. Team Responsibilities</h2>
+  <table>
+    <thead>
+      <tr><th style="width:13%">Member</th><th style="width:27%">Responsibility</th><th>Deliverables</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Cipher design</td><td>Feistel algorithm, key schedule, S-box, encryption/decryption and unit tests</td></tr>
+      <tr><td>2</td><td>Meter simulation</td><td>Dummy readings, quantization, packets, timestamps and replay simulation</td></tr>
+      <tr><td>3</td><td>Backend</td><td>FastAPI endpoints, input validation, integration and API tests</td></tr>
+      <tr><td>4</td><td>Frontend</td><td>Dashboard, round visualization, graphs and responsive layout</td></tr>
+      <tr><td>5</td><td>Evaluation</td><td>Avalanche analysis, benchmarks, energy model and comparison charts</td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Each member will maintain tests and documentation for their module, contribute through version
+    control, and demonstrate their work during the final presentation.
+  </p>
+
+  <h2>9. Development Schedule</h2>
+  <table>
+    <thead>
+      <tr><th>Stage</th><th>Work</th><th>Output</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Research and algorithm specification</td><td>Final design and hand-worked example</td></tr>
+      <tr><td>2</td><td>Python cipher and automated tests</td><td>Verified reference implementation</td></tr>
+      <tr><td>3</td><td>Meter and packet simulation</td><td>End-to-end data flow</td></tr>
+      <tr><td>4</td><td>Evaluation scripts</td><td>Timing, diffusion and energy results</td></tr>
+      <tr><td>5</td><td>Web interface and integration</td><td>Working demonstration</td></tr>
+      <tr><td>6</td><td>Testing, report and presentation</td><td>Final submission</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. Expected Result and Limitation</h2>
+  <p>
+    The study is expected to show that additional rounds improve diffusion while increasing time
+    and energy cost. The 8-bit design is useful for demonstrating Feistel construction, but its small
+    block and key spaces make it unsuitable for production smart-meter security. A real deployment
+    should use a standard authenticated cipher such as AES-based encryption.
+  </p>
+</body>
+</html>

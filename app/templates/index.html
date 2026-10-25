@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feistel Smart Meter Simulator</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div><span class="logo">F</span><strong>Feistel Simulator</strong></div>
+      <nav class="tabs" aria-label="Simulator views">
+        <button class="tab active" data-tab="simulation">Simulation</button>
+        <button class="tab" data-tab="automation">Automation</button>
+        <button class="tab" data-tab="graph">Graph</button>
+        <button class="tab" data-tab="data">Data</button>
+      </nav>
+      <span class="online"><i></i> Ready</span>
+    </header>
+
+    <section id="simulatorView" class="view">
+    <section class="controls">
+      <label>Rounds<select id="roundsInput"><option value="4">4</option><option value="6" selected>6</option><option value="8">8</option></select></label>
+      <label>Key<div class="key-input"><span>0x</span><input id="keyInput" value="BEEF" maxlength="4"></div></label>
+      <label class="simulation-only">Packet<select id="scenarioInput"><option value="none">Normal</option><option value="tamper">Tampered</option><option value="replay">Replay</option></select></label>
+      <label class="automation-only hidden">Interval<select id="intervalInput"><option value="1">1 second</option><option value="2" selected>2 seconds</option><option value="5">5 seconds</option></select></label>
+      <button id="runButton">Run simulation</button>
+    </section>
+
+    <section class="workspace">
+      <article class="card meter-card">
+        <div class="card-title"><span>01</span><h2>Meter data</h2><b id="meterStatus">Idle</b></div>
+        <div class="primary-reading"><strong id="usageValue">—</strong><span>kWh</span></div>
+        <div class="reading-grid">
+          <div><span>Power</span><strong id="powerValue">—</strong></div>
+          <div><span>Voltage</span><strong id="voltageValue">—</strong></div>
+          <div><span>Current</span><strong id="currentValue">—</strong></div>
+          <div><span>Sequence</span><strong id="sequenceValue">—</strong></div>
+        </div>
+        <div class="byte-box"><span>8-bit plaintext</span><strong id="plainBits">--------</strong><small id="plainDecimal">—</small></div>
+        <div class="data-table">
+          <div class="table-head"><span>Time</span><span>Power</span><span>kWh</span></div>
+          <div id="readingRows"><p class="empty">Run to generate data</p></div>
+        </div>
+      </article>
+
+      <article class="card cipher-card">
+        <div class="card-title"><span>02</span><h2>Encryption</h2><b id="roundStatus">Idle</b></div>
+        <div class="halves">
+          <div><span>LEFT</span><strong id="leftBits">----</strong></div>
+          <i>F</i>
+          <div><span>RIGHT</span><strong id="rightBits">----</strong></div>
+        </div>
+        <div class="function-row">
+          <div><span>KEY</span><strong id="subkeyBits">----</strong></div><i>⊕</i>
+          <div><span>R XOR K</span><strong id="xorBits">----</strong></div><i>→</i>
+          <div><span>S-BOX</span><strong id="sboxBits">----</strong></div><i>→</i>
+          <div><span>PERMUTE</span><strong id="permutationBits">----</strong></div>
+        </div>
+        <div id="rounds" class="rounds"><p class="empty">Round states appear here</p></div>
+        <div class="ciphertext"><span>CIPHERTEXT</span><strong id="cipherBits">--------</strong><small id="cipherValue">—</small></div>
+      </article>
+
+      <article class="card output-card">
+        <div class="card-title"><span>03</span><h2>Output</h2><b id="gatewayStatus">Idle</b></div>
+        <div class="packet">
+          <div><span>Meter</span><strong>SM-2048</strong></div>
+          <div><span>Sequence</span><strong id="packetSequence">—</strong></div>
+          <div><span>IV</span><strong>0x5A</strong></div>
+          <div><span>Cipher</span><strong id="packetCipher">—</strong></div>
+          <div class="tag"><span>Tag</span><strong id="packetTag">—</strong></div>
+        </div>
+        <div id="result" class="result"><span>○</span><strong>Waiting</strong></div>
+        <div class="checks">
+          <div><span>Integrity</span><strong id="integrityValue">—</strong></div>
+          <div><span>Sequence</span><strong id="sequenceCheck">—</strong></div>
+          <div><span>Recovered</span><strong id="recoveredValue">—</strong></div>
+        </div>
+        <div class="metrics">
+          <div><span>Avalanche</span><strong id="avalancheValue">—</strong></div>
+          <div><span>Time</span><strong id="timingValue">—</strong></div>
+          <div><span>Energy</span><strong id="energyValue">—</strong></div>
+        </div>
+      </article>
+    </section>
+    </section>
+
+    <section id="graphView" class="view hidden">
+      <div class="graph-toolbar">
+        <div><strong>Automation records</strong><span id="graphCount">0 samples</span></div>
+        <div><span id="graphStatus" class="graph-status">Stopped</span><button id="clearGraph">Clear data</button></div>
+      </div>
+      <article class="graph-card">
+        <div class="graph-legend"><span><i class="power-dot"></i>Power (kW)</span><span><i class="usage-dot"></i>Usage (kWh)</span></div>
+        <svg id="automationChart" viewBox="0 0 1000 380" role="img" aria-label="Automation readings graph">
+          <g id="chartGrid"></g>
+          <path id="powerPath" class="power-path"></path>
+          <path id="usagePath" class="usage-path"></path>
+        </svg>
+        <div id="emptyGraph" class="empty-graph">Start automation to record data</div>
+      </article>
+      <article class="records-card">
+        <div class="records-head"><span>Time</span><span>Sequence</span><span>Power</span><span>Usage</span><span>Plaintext</span><span>Ciphertext</span></div>
+        <div id="graphRows"><p class="empty">No automation records</p></div>
+      </article>
+    </section>
+
+    <section id="dataView" class="view hidden">
+      <div class="data-toolbar">
+        <div><strong>Saved automation data</strong><span id="dataCount">0 records</span></div>
+        <div class="data-actions">
+          <button id="refreshData">Refresh</button>
+          <button id="exportData" class="export-button">Export Excel</button>
+        </div>
+      </div>
+      <article class="saved-data-card">
+        <div class="saved-data-head">
+          <span>ID</span><span>Timestamp</span><span>Sequence</span><span>Voltage</span><span>Current</span><span>Power</span><span>Usage</span><span>Plaintext</span><span>Ciphertext</span><span>Rounds</span><span>Time</span><span>Integrity</span>
+        </div>
+        <div id="savedDataRows"><p class="empty">No automation records</p></div>
+      </article>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+</body>
+</html>
